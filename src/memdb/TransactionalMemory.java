@@ -3,11 +3,8 @@ package memdb;
 import java.io.*;
 
 public class TransactionalMemory {
-  public String sayHiTo (String name) {
-    return "Hi " + name;
-  }
 
-  static public Object deepClone (Object o) {
+  static public Object deepClone(Object o) {
     return deserialize(serialize(o));
   }
 
@@ -30,6 +27,15 @@ public class TransactionalMemory {
     } catch (ClassNotFoundException e) {
       throw new RuntimeException(e);
     } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public void update(Transaction transaction) {
+    try {
+      transaction.run();
+    } catch (Exception e) {
+      Transaction.current().rollback();
       throw new RuntimeException(e);
     }
   }
