@@ -22,6 +22,10 @@ public abstract class Transaction {
     return current().addOperation(object, method, arguments);
   }
 
+  static public AddDataDsl atomize(Object object, String method, Object... arguments) {
+    return add(object, method, arguments);
+  }
+
   public AddDataDsl addOperation(Object object, String method, Object... arguments) {
     Operation operation = new Operation(object, method, arguments);
     operations.add(operation);

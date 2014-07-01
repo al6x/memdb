@@ -1,5 +1,6 @@
 package memdb;
 
+import static memdb.Transaction.atomize;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Before;
@@ -10,49 +11,49 @@ import java.util.ArrayList;
 
 public class TransactionMemoryTest implements Serializable {
 
-  private Data db, originalDb;
+  private Posts posts, originalDb;
 
   @Before
   public void prepareData() {
-    db = new Data();
-    db.update(new Transaction() {
+    posts = new Posts();
+    posts.update(new Transaction() {
       public void run() {
-        db.posts.add(new Post("A", "A1", "A2"));
-        db.posts.add(new Post("B", "B1", "B2"));
+        posts.add(new Post("A", "A1", "A2"));
+        posts.add(new Post("B", "B1", "B2"));
       }
     });
 
-    this.originalDb = (Data) TransactionalMemory.deepClone(db);
+    this.originalDb = (Posts) TransactionalMemory.deepClone(posts);
   }
 
   @Test
   public void shouldCommitTransaction() {
-    db.update(new Transaction() {
+    posts.update(new Transaction() {
       public void run() {
-        db.posts.add(new Post("C"));
-        db.posts.get(0).addTag("A3");
+        posts.add(new Post("C"));
+        posts.get(0).setTags(new String[] {"A3"});
       }
     });
 
-    assertEquals(3, db.posts.size());
-    assertEquals("C", db.posts.get(2).getText());
-    String[] newTags = {"A1", "A2", "A3"};
-    assertEquals(newTags, db.posts.get(0).getTags());
+    assertEquals(3, posts.size());
+    assertEquals("C", posts.get(2).getText());
+    String[] newTags = {"A3"};
+    assertEquals(newTags, posts.get(0).getTags());
   }
 
   @Test
   public void shouldRollbackTransaction() {
-    db.update(new Transaction() {
+    posts.update(new Transaction() {
       public void run() {
-        db.posts.add(new Post("C"));
-        db.posts.get(0).addTag("A3");
+        posts.add(new Post("C"));
+        posts.get(0).setTags(new String[]{"A3"});
         rollback();
       }
     });
 
-    assertEquals(2, db.posts.size());
+    assertEquals(2, posts.size());
     String[] tags = {"A1", "A2"};
-    assertEquals(tags, db.posts.get(0).getTags());
+    assertEquals(tags, posts.get(0).getTags());
   }
 
   @Test
@@ -95,24 +96,28 @@ public class TransactionMemoryTest implements Serializable {
 
     public String getText() { return text; }
 
-    public String[] getTags() { return tags; }
-
-    public void addTag(String tag) {
-      Transaction.add(this, "addTag", tag).with((Object) tags);
-      String[] newTags = new String[tags.length + 1];
-      System.arraycopy(tags, 0, newTags, 0, tags.length);
-      newTags[newTags.length - 1] = tag;
-      tags = newTags;
+    public void setText(String text) {
+      Transaction.add(this, "setText", text).with(this.text);
+      this.text = text;
     }
 
-    public void rollbackAddTag(String tag, String[] oldTags) { this.tags = oldTags; }
+    public void rollbackSetText(String text, String oldText) { this.text = oldText; }
+
+    public String[] getTags() { return tags; }
+
+    public void setTags(String[] tags) {
+      atomize(this, "setTags", (Object) tags).with((Object) this.tags);
+      this.tags = tags;
+    }
+
+    public void rollbackSetTags(String[] tags, String[] oldTags) { this.tags = oldTags; }
   }
 
-  class Posts implements Serializable {
+  class Posts extends TransactionalMemory implements Serializable {
     private ArrayList<Post> list = new ArrayList<Post>();
 
     public boolean add(Post post) {
-      Transaction.add(this, "add", post).with(list.size());
+      atomize(this, "add", post).with(list.size());
       return list.add(post);
     }
 
@@ -123,9 +128,5 @@ public class TransactionMemoryTest implements Serializable {
     public Post get(int i) { return list.get(i); }
 
     public int size() { return list.size(); }
-  }
-
-  class Data extends TransactionalMemory implements Serializable {
-    public Posts posts = new Posts();
   }
 }
