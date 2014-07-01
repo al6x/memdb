@@ -98,7 +98,7 @@ public class TransactionMemoryTest implements Serializable {
     public String[] getTags() { return tags; }
 
     public void addTag(String tag) {
-      Transaction.add(this, "addTag", tag).with(tags);
+      Transaction.add(this, "addTag", tag).with((Object) tags);
       String[] newTags = new String[tags.length + 1];
       System.arraycopy(tags, 0, newTags, 0, tags.length);
       newTags[newTags.length - 1] = tag;
