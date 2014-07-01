@@ -34,10 +34,10 @@ public class TransactionMemoryTest implements Serializable {
       }
     });
 
-    assertEquals(db.posts.size(), 3);
-    assertEquals(db.posts.get(2).getText(), "C");
+    assertEquals(3, db.posts.size());
+    assertEquals("C", db.posts.get(2).getText());
     String[] newTags = {"A1", "A2", "A3"};
-    assertEquals(db.posts.get(0).getTags(), newTags);
+    assertEquals(newTags, db.posts.get(0).getTags());
   }
 
   @Test
@@ -46,13 +46,41 @@ public class TransactionMemoryTest implements Serializable {
       public void run() {
         db.posts.add(new Post("C"));
         db.posts.get(0).addTag("A3");
-        this.rollback();
+        rollback();
       }
     });
 
-    assertEquals(db.posts.size(), 2);
+    assertEquals(2, db.posts.size());
     String[] tags = {"A1", "A2"};
-    assertEquals(db.posts.get(0).getTags(), tags);
+    assertEquals(tags, db.posts.get(0).getTags());
+  }
+
+  @Test
+  public void shouldNotCallRollbackTwice() {
+    class ShouldNotRollbackTwice extends TransactionalMemory {
+      public int count = 0;
+      public void run() {Transaction.add(this, "run");}
+      public void rollbackRun() {
+        count++;
+        throw new RuntimeException("can't rollback!");
+     }
+    }
+
+    final ShouldNotRollbackTwice db = new ShouldNotRollbackTwice();
+    Exception exception = null;
+    try {
+      db.update(new Transaction() {
+        public void run() {
+          db.run();
+          rollback();
+        }
+      });
+    } catch (Exception e) {
+      exception = e;
+    }
+
+    assertEquals("java.lang.RuntimeException: java.lang.RuntimeException: can't rollback!", exception.getMessage());
+    assertEquals(1, db.count);
   }
 
   // Data structures.
@@ -70,7 +98,7 @@ public class TransactionMemoryTest implements Serializable {
     public String[] getTags() { return tags; }
 
     public void addTag(String tag) {
-      Transaction.add(this, "add", tag).with(tags);
+      Transaction.add(this, "addTag", tag).with(tags);
       String[] newTags = new String[tags.length + 1];
       System.arraycopy(tags, 0, newTags, 0, tags.length);
       newTags[newTags.length - 1] = tag;
@@ -84,11 +112,13 @@ public class TransactionMemoryTest implements Serializable {
     private ArrayList<Post> list = new ArrayList<Post>();
 
     public boolean add(Post post) {
-      Transaction.add(this, "add", post);
+      Transaction.add(this, "add", post).with(list.size());
       return list.add(post);
     }
 
-    public void rollbackAdd(Post post) { if (list.get(list.size()) == post) list.remove(list.size() - 1); }
+    public void rollbackAdd(Post post, Integer oldSize) {
+      if (list.size() > oldSize) list.remove(list.size() - 1);
+    }
 
     public Post get(int i) { return list.get(i); }
 

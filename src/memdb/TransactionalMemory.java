@@ -35,7 +35,7 @@ public class TransactionalMemory {
     try {
       transaction.run();
     } catch (Exception e) {
-      Transaction.current().rollback();
+      if (!transaction.rolledBack()) transaction.rollback();
       throw new RuntimeException(e);
     }
   }
