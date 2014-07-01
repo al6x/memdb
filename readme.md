@@ -2,13 +2,13 @@
 
 Simple in-memory transactional database of native objects with persistent log.
 
-Use `scripts/test` to run tests, also take a look at [examples](examples).
+Use `scripts/test` to run tests and `scripts/posts-example` to run examples.
 
 # Example
 
 *For the actual code go to [examples/PostsExample.java](examples/PostsExample.java)*
 
-Define your Domain Model.
+Define your Domain Models.
 
 ``` Java
 public static class Post {
@@ -42,7 +42,7 @@ public static class Posts extends TransactionalMemory {
 }
 ```
 
-Use it as plain native Java Objects, changes will be transactional and persistent.
+Now you can use it as plain native Java Objects, and changes will be transactional and persistent.
 
 *Transactional means that either the whole changes will be applied or nothing (if canceled
 explicitly or exception thrown).*
@@ -56,7 +56,8 @@ posts.update(new Transaction() { public void run() {
   posts.add(new Post("First post..."));
 }});
 
-// Name of the first post will be changed and the second one will be added, transactionally.
+// Name of the first post will be changed and the second one will be added,
+// transactionally.
 posts.update(new Transaction() { public void run() {
   posts.get(0).setText("Another name");
   posts.add(new Post("Second post..."));
@@ -66,6 +67,8 @@ posts.update(new Transaction() { public void run() {
 posts.update(new Transaction() { public void run() {
   posts.get(0).setText("Yet another name");
   posts.add(new Post("Third post..."));
+
+  // Rolling back changes.
   rollback();
 }});
 ```

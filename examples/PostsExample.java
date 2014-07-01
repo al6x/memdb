@@ -49,7 +49,8 @@ public class PostsExample {
     }});
     System.out.println("Posts size: " + posts.size());
 
-    // Name of the first post will be changed and the second one will be added, transactionally.
+    // Name of the first post will be changed and the second one will be added,
+    // transactionally.
     posts.update(new Transaction() { public void run() {
       posts.get(0).setText("Another name");
       posts.add(new Post("Second post..."));
@@ -62,6 +63,8 @@ public class PostsExample {
     posts.update(new Transaction() { public void run() {
       posts.get(0).setText("Yet another name");
       posts.add(new Post("Third post..."));
+
+      // Rolling back changes.
       rollback();
     }});
     System.out.println();
