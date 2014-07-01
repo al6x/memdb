@@ -13,36 +13,18 @@ Define your Domain Models.
 ``` Java
 public static class Post {
   private String text;
-
-  public Post(String text) { this.text = text; }
-
-  public String getText() { return text; }
-  public void setText(String text) {
-    atomize(this, "setText", text).with(this.text);
-    this.text = text;
-  }
-  public void rollbackSetText(String text, String oldText) { this.text = oldText; }
+  public String getText() {...}
+  public void setText(String text) {...}
 }
 
-// Collection of Posts.
 public static class Posts extends TransactionalMemory {
-  private ArrayList<Post> list = new ArrayList<Post>();
-
-  public Post get(int i) { return list.get(i); }
-
-  public boolean add(Post post) {
-    atomize(this, "add", post).with(list.size());
-    return list.add(post);
-  }
-  public void rollbackAdd(Post post, Integer oldSize) {
-    if (list.size() > oldSize) list.remove(list.size() - 1);
-  }
-
-  public int size() { return list.size(); }
+  public Post get(int i) {...}
+  public boolean add(Post post) {...}
+  public int size() {...}
 }
 ```
 
-Now you can use it as plain native Java Objects, and changes will be transactional and persistent.
+And use it as plain native Java Objects, changes will be transactional and persistent.
 
 *Transactional means that either the whole changes will be applied or nothing (if canceled
 explicitly or exception thrown).*
@@ -52,25 +34,42 @@ explicitly or exception thrown).*
 final Posts posts = new Posts();
 
 // One post will be added.
-posts.update(new Transaction() { public void run() {
+atomic(new Transaction() { public void run() {
   posts.add(new Post("First post..."));
 }});
 
-// Name of the first post will be changed and the second one will be added,
+// Name of the first post will be changed and the second Post will be added,
 // transactionally.
-posts.update(new Transaction() { public void run() {
+atomic(new Transaction() { public void run() {
   posts.get(0).setText("Another name");
   posts.add(new Post("Second post..."));
 }});
 
 // Nothing will be changed.
-posts.update(new Transaction() { public void run() {
+atomic(new Transaction() { public void run() {
   posts.get(0).setText("Yet another name");
   posts.add(new Post("Third post..."));
 
   // Rolling back changes.
   rollback();
 }});
+```
+
+To make operation transactional you need to explain how to roll it back, code below
+shows how the `setText` operation implemented.
+
+``` Java
+public static class Post {
+  private String text;
+  
+  public String getText() { return text; }
+  
+  public void setText(String text) {
+    atomize(this, "setText", text).with(this.text);
+    this.text = text;
+  }
+  public void rollbackSetText(String text, String oldText) { this.text = oldText; }
+}
 ```
 
 # Persistence

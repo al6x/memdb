@@ -1,6 +1,7 @@
 package memdb;
 
 import static memdb.Transaction.atomize;
+import static memdb.TransactionalMemory.atomic;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Before;
@@ -16,7 +17,7 @@ public class TransactionMemoryTest implements Serializable {
   @Before
   public void prepareData() {
     posts = new Posts();
-    posts.update(new Transaction() {
+    atomic(new Transaction() {
       public void run() {
         posts.add(new Post("A", "A1", "A2"));
         posts.add(new Post("B", "B1", "B2"));
@@ -28,10 +29,10 @@ public class TransactionMemoryTest implements Serializable {
 
   @Test
   public void shouldCommitTransaction() {
-    posts.update(new Transaction() {
+    atomic(new Transaction() {
       public void run() {
         posts.add(new Post("C"));
-        posts.get(0).setTags(new String[] {"A3"});
+        posts.get(0).setTags(new String[]{"A3"});
       }
     });
 
@@ -43,7 +44,7 @@ public class TransactionMemoryTest implements Serializable {
 
   @Test
   public void shouldRollbackTransaction() {
-    posts.update(new Transaction() {
+    atomic(new Transaction() {
       public void run() {
         posts.add(new Post("C"));
         posts.get(0).setTags(new String[]{"A3"});
@@ -58,7 +59,7 @@ public class TransactionMemoryTest implements Serializable {
 
   @Test
   public void shouldNotCallRollbackTwice() {
-    class ShouldNotRollbackTwice extends TransactionalMemory {
+    class ShouldNotRollbackTwice {
       public int count = 0;
       public void run() {Transaction.add(this, "run");}
       public void rollbackRun() {
@@ -70,7 +71,7 @@ public class TransactionMemoryTest implements Serializable {
     final ShouldNotRollbackTwice db = new ShouldNotRollbackTwice();
     Exception exception = null;
     try {
-      db.update(new Transaction() {
+      atomic(new Transaction() {
         public void run() {
           db.run();
           rollback();
@@ -113,7 +114,7 @@ public class TransactionMemoryTest implements Serializable {
     public void rollbackSetTags(String[] tags, String[] oldTags) { this.tags = oldTags; }
   }
 
-  class Posts extends TransactionalMemory implements Serializable {
+  class Posts implements Serializable {
     private ArrayList<Post> list = new ArrayList<Post>();
 
     public boolean add(Post post) {

@@ -31,7 +31,7 @@ public class TransactionalMemory {
     }
   }
 
-  public void update(Transaction transaction) {
+  public static void atomic(Transaction transaction) {
     try {
       transaction.run();
     } catch (Exception e) {

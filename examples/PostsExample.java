@@ -4,6 +4,7 @@ import memdb.TransactionalMemory;
 import java.util.ArrayList;
 
 import static memdb.Transaction.atomize;
+import static memdb.TransactionalMemory.atomic;
 
 public class PostsExample {
 
@@ -22,7 +23,7 @@ public class PostsExample {
   }
 
   // Collection of Posts.
-  public static class Posts extends TransactionalMemory {
+  public static class Posts {
     private ArrayList<Post> list = new ArrayList<Post>();
 
     public Post get(int i) { return list.get(i); }
@@ -44,29 +45,35 @@ public class PostsExample {
     final Posts posts = new Posts();
 
     // One post will be added.
-    posts.update(new Transaction() { public void run() {
-      posts.add(new Post("First post..."));
-    }});
+    atomic(new Transaction() {
+      public void run() {
+        posts.add(new Post("First post..."));
+      }
+    });
     System.out.println("Posts size: " + posts.size());
 
-    // Name of the first post will be changed and the second one will be added,
+    // Name of the first post will be changed and the second Post will be added,
     // transactionally.
-    posts.update(new Transaction() { public void run() {
-      posts.get(0).setText("Another name");
-      posts.add(new Post("Second post..."));
-    }});
+    atomic(new Transaction() {
+      public void run() {
+        posts.get(0).setText("Another name");
+        posts.add(new Post("Second post..."));
+      }
+    });
     System.out.println();
     System.out.println("Text of the first post: " + posts.get(0).getText());
     System.out.println("Posts size: " + posts.size());
 
     // Nothing will be changed.
-    posts.update(new Transaction() { public void run() {
-      posts.get(0).setText("Yet another name");
-      posts.add(new Post("Third post..."));
+    atomic(new Transaction() {
+      public void run() {
+        posts.get(0).setText("Yet another name");
+        posts.add(new Post("Third post..."));
 
-      // Rolling back changes.
-      rollback();
-    }});
+        // Rolling back changes.
+        rollback();
+      }
+    });
     System.out.println();
     System.out.println("Text of the first post: " + posts.get(0).getText());
     System.out.println("Posts size: " + posts.size());
